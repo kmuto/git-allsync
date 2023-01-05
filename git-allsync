@@ -1,0 +1,42 @@
+#!/usr/bin/env ruby
+# -*- mode: ruby-mode -*-
+# tiny sync tool for multiple Git folders
+# Copyright 2023 Kenshi Muto
+require 'open3'
+
+# allsync will pull when branch name is...
+target_branches = %w[master main]
+
+gitpull = 'git pull'
+
+Dir.glob('*') do |entry|
+  next if !File.readable?(entry) || !File.directory?(entry) ||
+          entry.start_with?('.') ||
+          !File.exist?(File.join(entry, '.git'))
+
+  Dir.chdir(entry) do
+    print "[#{entry}]..."
+
+    out, status = Open3.capture2e('git branch --show-current')
+
+    unless status.success?
+      puts "error\n#{out}"
+      next
+    end
+
+    branchname = out.chomp
+    unless target_branches.include?(branchname)
+      puts "#{branchname} (skip)"
+      next
+    end
+
+    out2, status2 = Open3.capture2e(gitpull)
+
+    unless status2.success?
+      puts "#{branchname} pull error\n#{out2}"
+      next
+    end
+
+    puts "#{branchname} pulled."
+  end
+end
